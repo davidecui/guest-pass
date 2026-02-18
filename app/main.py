@@ -4,10 +4,15 @@ from pydantic import BaseModel
 import qrcode
 import io
 import base64
+from pathlib import Path
 
 app = FastAPI()
 
-app.mount("/public", StaticFiles(directory="public"), name="public")
+# Determine the base directory (where main.py is located)
+BASE_DIR = Path(__file__).resolve().parent
+
+# Mount the public directory using the absolute path
+app.mount("/public", StaticFiles(directory=BASE_DIR / "public"), name="public")
 
 class WifiCredentials(BaseModel):
     ssid: str
@@ -40,4 +45,9 @@ async def generate_qr(creds: WifiCredentials):
 @app.get("/")
 async def read_index():
     from fastapi.responses import FileResponse
-    return FileResponse('public/index.html')
+    # Serve index.html using the absolute path
+    return FileResponse(BASE_DIR / 'public/index.html')
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
