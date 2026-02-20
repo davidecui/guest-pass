@@ -6,6 +6,11 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "gcs" {
+    # Configured via CLI flags:
+    # terraform init -backend-config="bucket=YOUR_BUCKET_NAME"
+  }
 }
 
 provider "google" {
