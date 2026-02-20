@@ -88,7 +88,7 @@ The service account used by Terraform / GitHub Actions needs the following roles
 | Role | Purpose |
 |---|---|
 | `roles/run.admin` | Create and manage Cloud Run services |
-| `roles/artifactregistry.writer` | Push Docker images |
+| `roles/artifactregistry.repoAdmin` | Push Docker images |
 | `roles/iam.serviceAccountUser` | Act as the Compute Engine default SA used by Cloud Run |
 
 Grant them with:
@@ -103,7 +103,7 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:$SA_EMAIL" \
-  --role="roles/artifactregistry.writer"
+  --role="roles/artifactregistry.repoAdmin"
 
 # Grant actAs on the Compute Engine default service account used by Cloud Run
 gcloud iam service-accounts add-iam-policy-binding \
