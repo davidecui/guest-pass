@@ -5,7 +5,7 @@ resource "google_cloud_run_v2_service" "default" {
 
   template {
     containers {
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.repository_name}/${var.service_name}:latest"
+      image = "us-docker.pkg.dev/cloudrun/container/hello:latest"
       ports {
         container_port = 8000
       }
