@@ -4,16 +4,23 @@ on:
   push:
     branches:
       - main
+    tags:
+      - '**'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-central1
   REPO_NAME: guest-pass-repo
-  SERVICE_NAME: guest-pass
 
 jobs:
-  deploy:
+  # ── Dev deploy: runs on every push to main ────────────────────────────────
+  deploy-dev:
+    name: Deploy (Dev)
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: dev
+    env:
+      SERVICE_NAME: guest-pass-dev
 
     permissions:
       contents: 'read'
@@ -36,14 +43,58 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} ./app
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
-          docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:latest
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:latest
+          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}
+          docker build -t $IMAGE:${{ github.sha }} ./app
+          docker push $IMAGE:${{ github.sha }}
+          docker tag  $IMAGE:${{ github.sha }} $IMAGE:latest
+          docker push $IMAGE:latest
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to Cloud Run (Dev)
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+  # ── Production deploy: runs when a tag is pushed ──────────────────────────
+  deploy-production:
+    name: Deploy (Production)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    environment: production   # requires manual approval in GitHub Environments
+    env:
+      SERVICE_NAME: guest-pass
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}
+          docker build -t $IMAGE:${{ github.ref_name }} ./app
+          docker push $IMAGE:${{ github.ref_name }}
+          docker tag  $IMAGE:${{ github.ref_name }} $IMAGE:latest
+          docker push $IMAGE:latest
+
+      - name: Deploy to Cloud Run (Production)
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.ref_name }}
