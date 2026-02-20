@@ -53,7 +53,8 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan -no-color -detailed-exitcode
+        run: terraform plan -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan -no-color
+
 
 
       - name: Upload Plan
@@ -78,9 +79,7 @@ jobs:
               body: output
             });
 
-      - name: Fail if Plan Failed
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
+
 
   apply-dev:
     name: Terraform Apply (Dev)
