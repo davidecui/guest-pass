@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 import qrcode
 import io
 import base64
 from pathlib import Path
+from app.models import WifiCredentials
 
 app = FastAPI()
 
@@ -13,11 +13,6 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # Mount the public directory using the absolute path
 app.mount("/public", StaticFiles(directory=BASE_DIR / "public"), name="public")
-
-class WifiCredentials(BaseModel):
-    ssid: str
-    password: str
-    encryption: str = "WPA"  # Default to WPA/WPA2
 
 @app.post("/generate")
 async def generate_qr(creds: WifiCredentials):
