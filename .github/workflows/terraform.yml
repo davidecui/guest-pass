@@ -53,8 +53,8 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan -no-color
-        continue-on-error: true
+        run: terraform plan -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan -no-color -detailed-exitcode
+
 
       - name: Upload Plan
         uses: actions/upload-artifact@v4
