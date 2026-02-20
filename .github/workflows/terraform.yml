@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - '**'
     paths:
       - 'terraform/**'
   pull_request:
@@ -79,13 +81,53 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
-  apply:
-    name: Terraform Apply
+  apply-dev:
+    name: Terraform Apply (Dev)
     runs-on: ubuntu-latest
     needs: plan
-    # Only run on main branch push events, not PRs
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    environment: production   # <-- This requires manual approval via GitHub Environments
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: dev
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Download Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: terraform
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+  apply-production:
+    name: Terraform Apply (Production)
+    runs-on: ubuntu-latest
+    needs: plan
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    environment: production   # <-- Requires manual approval via GitHub Environments
 
     permissions:
       contents: 'read'
