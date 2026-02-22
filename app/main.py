@@ -4,7 +4,10 @@ import qrcode
 import io
 import base64
 from pathlib import Path
-from .models import WifiCredentials
+try:
+    from .models import WifiCredentials
+except ImportError:
+    from models import WifiCredentials
 
 app = FastAPI()
 
